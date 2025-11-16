@@ -35,6 +35,10 @@ class Trajectory{
         void calc_scalar_profile(float current_time, float acc_time, float const_vel_time, float dec_time, float s_curve_time, float max_acc, float max_dec, float max_vel, float total_dist, float s, float sd, float sdd) const;
         // 現在時刻tにおける目標位置, 目標速度, 目標加速度を計算する関数
         void get_s_curve_state(float current_time, Vec2& target_pos, Vec2& target_vel, Vec2& target_acc) const;
+        void setPoints(const Vec2& start, const Vec2& end) {
+            start_pos = start;
+            end_pos   = end;
+        }
     #if defined(CIRCLE_TRAJECTORY)
         // 円軌道用の関数をここに追加
         void set_circle_params(float radius, float cx, float cy);

@@ -1,6 +1,7 @@
 #include "dc_motor.hpp"
 #include "encoder.hpp"
 #include "trajectory.hpp"
+#include "PID.hpp"
 #include "pico/stdlib.h"
 #include "pico/multicore.h"
 #include "hardware/clocks.h"
@@ -37,6 +38,15 @@ constexpr float omega_n = 200.0f; //encoderカットオフ周波数
 
 constexpr float length = 0.062;
 constexpr float fin_length = 0.035;
+
+constexpr float Kp1 = 0.02;
+constexpr float Kd1 = 0;
+constexpr float tau1 = 0.001;
+constexpr float Kp2 = 0.008;
+constexpr float Kd2 = 0;
+constexpr float tau2 = 0.001;
+
+
 
 
 

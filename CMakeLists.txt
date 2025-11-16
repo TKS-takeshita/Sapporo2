@@ -37,6 +37,7 @@ pico_sdk_init()
 
 add_executable(Sapporo2 
                 src/main.cpp
+                src/PID.cpp
                 src/dc_motor.cpp
                 src/encoder.cpp
                 src/trajectory.cpp
