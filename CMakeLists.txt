@@ -38,7 +38,9 @@ pico_sdk_init()
 add_executable(Sapporo2 
                 src/main.cpp
                 src/dc_motor.cpp
-                src/encoder.cpp)
+                src/encoder.cpp
+                src/trajectory.cpp
+                src/low_pass_fillter.cpp)
 
 pico_set_program_name(Sapporo2 "Sapporo2")
 pico_set_program_version(Sapporo2 "0.1")

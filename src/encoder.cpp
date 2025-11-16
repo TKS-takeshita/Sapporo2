@@ -1,12 +1,22 @@
 #include "encoder.hpp"
 
-bool AS5601::begin(uint sda_pin, uint scl_pin, uint32_t baudrate_hz) {
+
+bool AS5601::begin(uint sda_pin, uint scl_pin, uint32_t baudrate_hz, float velocity_cutoff_freq) {
     i2c_init(i2c_, baudrate_hz);
     gpio_set_function(sda_pin, GPIO_FUNC_I2C);
     gpio_set_function(scl_pin, GPIO_FUNC_I2C);
     gpio_pull_up(sda_pin);
     gpio_pull_up(scl_pin);
     uint8_t status = 0;
+    previous_angle_rad = 0.0f;
+    angular_velocity_rad = 0.0f;
+    velocity_initialized = false;
+    velocity_filter = low_pass_fillter(velocity_cutoff_freq);
+    uint8_t buf[2];
+    readRegisters(REG_ANG_H, buf, 2);
+    prev_count = combine12(buf[0], buf[1]);
+    minus_count = false;
+    plus_count = false;
     return readStatus(status);
 }
 
@@ -37,9 +47,20 @@ bool AS5601::readRawAngleCounts(uint16_t& counts) {
 
 float AS5601::readAngle(uint16_t& counts) {
     uint8_t buf[2];
-    if (!readRegisters(REG_ANG_H, buf, 2)) return false;
+    readRegisters(REG_ANG_H, buf, 2);
     counts = combine12(buf[0], buf[1]);
+    int16_t diff_count = (int16_t)counts - (int16_t)prev_count;
+    prev_count = counts;
+    if(diff_count > 2048) {
+        minus_count = true;
+    }
+    if(diff_count < -2048) {
+        minus_count = false;
+    }    
     float rad = countsToRad(counts);
+    if(minus_count){
+        rad -= 2*M_PI;
+    }
     return rad;
 }
 
@@ -52,8 +73,7 @@ bool AS5601::readRawAngleRad(float& rad) {
 
 bool AS5601::readAngleRad(float& rad) {
     uint16_t c;
-    if (!readAngleCounts(c)) return false;
-    rad = countsToRad(c);
+    rad = readAngle(c);
     return true;
 }
 
@@ -64,12 +84,6 @@ bool AS5601::readRawAngleDeg(float& deg) {
     return true;
 }
 
-bool AS5601::readAngleDeg(float& deg) {
-    uint16_t c;
-    if (!readAngleCounts(c)) return false;
-    deg = countsToDeg(c);
-    return true;
-}
 
 bool AS5601::readStatus(uint8_t& status) {
     return readRegisters(REG_STATUS, &status, 1);
@@ -113,4 +127,25 @@ bool AS5601::setZeroAtCurrentPosition() {
 
 bool AS5601::readZMCO(uint8_t& zmco) {
     return readRegisters(REG_ZMCO, &zmco, 1);
+}
+
+
+bool AS5601::updateAngularVelocity(float dt_sec, float current_angle_rad, float& omega_rad) {
+    float delta_angle_rad = current_angle_rad - previous_angle_rad;
+    velocity_filter.update(current_angle_rad);
+    omega_rad = velocity_filter.get_dot_value();
+    
+    const float MAX_ANGULAR_VELOCITY = 10.786f; //最大角速度[rad/s] 103PRM
+    if(fabs(omega_rad) > MAX_ANGULAR_VELOCITY){
+        if(omega_rad < 0){
+            omega_rad = -MAX_ANGULAR_VELOCITY;
+        }
+        else{
+            omega_rad = MAX_ANGULAR_VELOCITY;
+        }
+        previous_angle_rad = current_angle_rad;
+        return true;
+    }
+    previous_angle_rad = current_angle_rad;
+    return true;
 }
